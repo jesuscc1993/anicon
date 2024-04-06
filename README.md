@@ -1,5 +1,7 @@
 (Forked from [notdedsec/anicon](https://github.com/notdedsec/anicon)).
 
+### _Original readme:_
+
 # Anicon
 
 Add cover art from MAL as folder icons to your anime/manga collection.
