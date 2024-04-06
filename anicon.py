@@ -4,19 +4,18 @@ import traceback
 from warnings import filterwarnings
 
 from PIL import Image, ImageOps
-from jikanpy import Jikan
 # noinspection PyPackageRequirements
-from mal import AnimeSearch
+from mal import AnimeSearch, MangaSearch
 from requests import get
 
 filterwarnings("ignore")
-jikan = Jikan()
-
 
 def get_name(folder_name: str) -> str:
     last_words = ['bd', 's0', '480p', '720p', '1080p']
-    words_to_remove = ['bluray', 'x265', 'x264', 'hevc', 'hi10p', 'avc', '10bit', 'dual', 'audio', 'eng', 'english',
-                       'subbed', 'sub', 'dubbed', 'dub']
+    words_to_remove = [
+      'bluray', 'x265', 'x264', 'hevc', 'hi10p', 'avc', '10bit', 'dual',
+      'audio', 'eng', 'english', 'subbed', 'sub', 'dubbed', 'dub'
+    ]
 
     folder_name = folder_name.lower().replace('_', ' ').replace('.', ' ')
 
@@ -28,18 +27,18 @@ def get_name(folder_name: str) -> str:
     folder_name = folder_name.replace('()', '').replace('[]', '')
 
     for word in last_words:
-        regex_str = "(?<=" + word + ")(?s)(.*$)"
-        folder_name = re.sub(regex_str, '', folder_name).replace(word, '')
+        regex_str = "(?<=" + word + ").*$"
+        folder_name = re.sub(regex_str, '', folder_name, flags=re.DOTALL).replace(word, '')
 
     return folder_name.strip()
 
 
-def get_artwork(anime_name: str, max_results: int = 5, mode: str = "mal-api") -> tuple:
-    print('\n' + anime_name.title())
+def get_artwork(media_name: str, max_results: int = 5, mode: str = "anime") -> tuple:
+    print('\n' + media_name.title())
 
     counter, choice = 1, 0
-    if mode == "mal-api":
-        results = AnimeSearch(anime_name).results
+    if mode == "anime":
+        results = AnimeSearch(media_name).results
         for result in results:
             if auto_mode:
                 print(' - ' + result.title)
@@ -51,15 +50,15 @@ def get_artwork(anime_name: str, max_results: int = 5, mode: str = "mal-api") ->
             if counter == max_results:
                 break
             counter += 1
-    elif mode == "jikanpy":
-        results = jikan.search('anime', anime_name, parameters={'type': 'tv'})
-        for result in results['results']:
+    elif mode == "manga":
+        results = MangaSearch(media_name).results
+        for result in results:
             if auto_mode:
-                print(' - ' + result['title'])
+                print(' - ' + result.title)
                 choice = 1
                 break
             else:
-                print(str(counter) + ' - ' + result['title'])
+                print(str(counter) + ' - ' + result.title)
 
             if counter == max_results:
                 break
@@ -76,8 +75,8 @@ def get_artwork(anime_name: str, max_results: int = 5, mode: str = "mal-api") ->
             return None, None
         choice = int(choice) - 1
 
-    image_url = results['results'][choice]['image_url'] if mode == "jikanpy" else results[choice].image_url
-    image_type = results['results'][choice]['type'] if mode == "jikanpy" else results[choice].type
+    image_url = results[choice].image_url
+    image_type = results[choice].type
 
     return image_url, image_type
 
@@ -104,10 +103,9 @@ def create_icon(img_link: str):
     img.close()
     return ico_file
 
-
 if __name__ == "__main__":
     print("""\
-Run this in your anime folder
+Run this in your anime/manga folder
 For help, info and memes, check out
 https://github.com/notdedsec/anicon
 """)
@@ -118,29 +116,31 @@ https://github.com/notdedsec/anicon
     except ValueError:
         max_res = 5
 
-    lib_mode = input("""\
+    media_mode = input("""\
 
-Image Source Library:
-1. mal-api (default)
-2. Jikanpy
+Media Mode:
+1. anime (default)
+2. manga
 > """)
-    if lib_mode == "2":
-        lib_mode = "jikanpy"
+    if media_mode == "2":
+        media_mode = "manga"
     else:
-        lib_mode = "mal-api"
+        media_mode = "anime"
 
     folder_list = next(os.walk('.'))[1]
     if folder_list is None or len(folder_list) == 0:
-        # In case the file is placed inside an innermost directory which contains only files and no other folders,
-        # this list will be empty. Thus adding the current directory path as an element of the list.
+        # In case the file is placed inside an innermost directory which
+        # contains only files and no other folders, this list will be empty.
+        # Thus adding the current directory path as an element of the list.
         folder_list = [str(os.getcwd())]
 
     for folder in folder_list:
         name = get_name(folder)
 
-        # Extracting the name of the folder without the path and then performing search for the same.
-        # This will be the name of the anime episode, thus instead of performing a search for the directory path,
-        # now performing a search for the directory name.
+        # Extracting the name of the folder without the path and then performing
+        # search for the same. This will be the name of the anime episode /
+        # manga chapter, thus instead of performing a search for the directory
+        # path, now performing a search for the directory name.
         name = name.rpartition('\\')[2].strip()
 
         icon_name = re.sub("[^A-Za-z0-9_,. ()-]", "_", name)
@@ -151,7 +151,7 @@ Image Source Library:
             print('An icon is already present. Delete the older icon and `desktop.ini` file before applying a new icon')
             continue
 
-        link, artwork_type = get_artwork(name, max_results=max_res, mode=lib_mode)
+        link, artwork_type = get_artwork(name, max_results=max_res, mode=media_mode)
         if not link or not artwork_type:
             print("Skipping this folder...")
             continue
@@ -172,15 +172,18 @@ Image Source Library:
             f.write("\nIconFile={}\nIconIndex=0".format(ico_file.replace(folder, "").strip("\\")))
 
             if artwork_type is not None and len(artwork_type) > 0:
-                # If the result has a type, then using this as the info-tip for the desktop icon.
+                # If the result has a type, then using this as the info-tip for
+                # the desktop icon.
                 f.write("\nInfoTip={}".format(artwork_type))
 
             # Closing the output stream.
-            # All the text will be written into `desktop.ini` file only when the output is being closed.
+            # All the text will be written into `desktop.ini` file only when the
+            # output is being closed.
             f.close()
 
             # Not marking the `desktop.ini` file as a system file.
-            # This will make sure that the file can be seen if display hidden items is enabled.
+            # This will make sure that the file can be seen if display hidden
+            # items is enabled.
             os.system('attrib +r \"{}\\{}\"'.format(os.getcwd(), folder))
             os.system('attrib +h \"{}\\desktop.ini\"'.format(folder))
             os.system('attrib +h \"{}\"'.format(icon))
