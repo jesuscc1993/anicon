@@ -1,4 +1,4 @@
-(Forked from https://github.com/notdedsec/anicon).
+(Forked from [notdedsec/anicon](https://github.com/notdedsec/anicon)).
 
 # Anicon
 
