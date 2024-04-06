@@ -2,12 +2,12 @@
 
 # Anicon
 
-Add cover art from MAL as folder icons to your anime collection.
+Add cover art from MAL as folder icons to your anime/manga collection.
 
 ### How do I use this?
 
 - Download the executable from [here](https://github.com/notdedsec/anicon/releases)
-- Run it in your anime folder
+- Run it in your anime/manga folder
 - Choose when you're asked to
 - Repeat till all folders are processed
 
@@ -18,11 +18,11 @@ Though there are some additional features to help you with this:
 
 #### AutoMode
 
-If enabled, the script will automatically select the first item from the search results. This works fine in most cases but in case you have separate folders for different seasons for the same anime, it will end up applying the same cover art of to all of those folders. It will be decided on the basis of which season has the highest score.
+If enabled, the script will automatically select the first item from the search results. This works fine in most cases but in case you have separate folders for different seasons for the same anime/manga, it will end up applying the same cover art of to all of those folders. It will be decided on the basis of which season has the highest score.
 
 #### Blank Input
 
-If you're not using AutoMode, you can give a blank input when you're asked to choose and it'll pick the first item from search results. This way, you can save a few keystrokes, just hitting the Enter key instead of typing '1' and then Enter. The anime you're looking for is most often the first one in the results.
+If you're not using AutoMode, you can give a blank input when you're asked to choose and it'll pick the first item from search results. This way, you can save a few keystrokes, just hitting the Enter key instead of typing '1' and then Enter. The anime/manga you're looking for is most often the first one in the results.
 
 ### Okay so I did everything, but the icons aren't showing up. (_panicks_)
 
@@ -55,9 +55,9 @@ There is another method to permanently attach the icon to the folder, but it'll 
 
 It, uhhh
 
-- Gets the Anime Name from the Folder Name
+- Gets the Anime/Manga Name from the Folder Name
 - Searches that name on MAL
-- Asks you to choose the anime from results
+- Asks you to choose the anime/manga from results
 - Gets the artwork and converts it into an icon
 - Makes a `desktop.ini` file which sets the folder icon.
 
