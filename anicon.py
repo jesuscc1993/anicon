@@ -88,7 +88,6 @@ def create_icon(img_link: str):
       new_data.append(item)
 
   img.putdata(new_data)
-  os.remove(jpg_file)
   img.save(ico_file)
   img.close()
   return ico_file
@@ -134,7 +133,7 @@ Media Mode:
     name = name.rpartition('\\')[2].strip()
 
     icon_name = re.sub("[^A-Za-z0-9_,. ()-]", "_", name)
-    jpg_file = folder + '\\' + icon_name + '.jpg'
+    jpg_file = folder + '\\cover.jpg'
     ico_file = folder + '\\' + icon_name + '.ico'
 
     if os.path.isfile(folder + "\\" + "desktop.ini"):
