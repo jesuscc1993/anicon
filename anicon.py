@@ -17,7 +17,7 @@ def get_name(folder_name: str) -> str:
     'audio', 'eng', 'english', 'subbed', 'sub', 'dubbed', 'dub'
   ]
 
-  folder_name = folder_name.lower().replace('_', ' ').replace('.', ' ')
+  folder_name = folder_name.replace('_', ' ').replace('.', ' ')
 
   for word in words_to_remove:
     folder_name = folder_name.replace(word, '')
@@ -34,8 +34,6 @@ def get_name(folder_name: str) -> str:
 
 
 def get_artwork(media_name: str, max_results: int = 5, media_mode: str = "anime") -> tuple:
-  print('\n' + media_name.title())
-
   results, counter, choice = None, 1, 0
   if media_mode == "anime":
     results = AnimeSearch(media_name).results
@@ -43,12 +41,14 @@ def get_artwork(media_name: str, max_results: int = 5, media_mode: str = "anime"
     results = MangaSearch(media_name).results
   else:
     raise Exception("Invalid mode specified")
-  print("X - Skip this folder")
+
+  if not auto_mode:
+    print('\n' + media_name.title())
+    print("X - Skip this folder")
 
   for result in results:
     if auto_mode:
-      print(' - ' + result.title)
-      choice = 1
+      choice = 0
       break
     else:
       print(str(counter) + ' - ' + result.title)
@@ -71,11 +71,11 @@ def get_artwork(media_name: str, max_results: int = 5, media_mode: str = "anime"
   return image_url, image_type
 
 
-def create_icon(img_link: str, media_mode: str):
+def create_icon(img_link: str, save_cover: bool):
   art = get(img_link)
-  open(jpg_file, 'wb').write(art.content)
+  open(jpg_path, 'wb').write(art.content)
 
-  img = Image.open(jpg_file)
+  img = Image.open(jpg_path)
   img = ImageOps.expand(img, (69, 0, 69, 0), fill=0)
   img = ImageOps.fit(img, (300, 300)).convert("RGBA")
 
@@ -88,24 +88,28 @@ def create_icon(img_link: str, media_mode: str):
       new_data.append(item)
 
   img.putdata(new_data)
-  if media_mode == "anime":
-    os.remove(jpg_file)
-  img.save(ico_file)
+  if (not save_cover):
+    os.remove(jpg_path)
+  img.save(ico_path)
   img.close()
-  return ico_file
+  return ico_path
 
 if __name__ == "__main__":
   print("""\
 Run this in your anime/manga folder
 For help, info and memes, check out
-https://github.com/notdedsec/anicon
+https://github.com/jesuscc1993/anicon
 """)
-  auto_mode = True if input('Use AutoMode? Y/N : ').upper() == 'Y' else False
-  max_results = input("Max Results (default 5): ")
-  try:
-    max_results = int(max_results)
-  except ValueError:
-    max_results = 5
+  auto_mode = input('Use AutoMode? Y/N (default N): ').upper() == 'Y'
+
+  if auto_mode:
+    max_results = 1
+  else:
+    max_results = input("Max Results (default 5): ")
+    try:
+      max_results = int(max_results)
+    except ValueError:
+      max_results = 5
 
   media_mode = input("""\
 
@@ -115,8 +119,10 @@ Media Mode:
 > """)
   if media_mode == "2":
     media_mode = "manga"
+    save_cover = input('Save cover? Y/N (default Y): ').upper() != 'N'
   else:
     media_mode = "anime"
+    save_cover = False
 
   folder_list = next(os.walk('.'))[1]
   if folder_list is None or len(folder_list) == 0:
@@ -135,12 +141,19 @@ Media Mode:
     name = name.rpartition('\\')[2].strip()
 
     icon_name = re.sub("[^A-Za-z0-9_,. ()-]", "_", name)
-    jpg_file = folder + '\\cover.jpg'
-    ico_file = folder + '\\' + icon_name + '.ico'
+    
+    ico_file = icon_name + '.ico'
+    ico_path = os.path.join(folder, ico_file)
+    ini_path = os.path.join(folder, 'desktop.ini')
+    jpg_path = os.path.join(folder, 'cover.jpg')
 
-    if os.path.isfile(folder + "\\" + "desktop.ini"):
-      print('An icon is already present. Delete the older icon and `desktop.ini` file before applying a new icon')
+    if os.path.isfile(ico_path):
+      print('Skipping folder "' + folder + '", which already has an icon.')
       continue
+
+    for file_path in [ico_path, ini_path, jpg_path]:
+      if os.path.isfile(file_path):
+        os.remove(file_path)
 
     link, artwork_type = get_artwork(name, max_results, media_mode)
     if not link or not artwork_type:
@@ -148,7 +161,7 @@ Media Mode:
       continue
 
     try:
-      icon = create_icon(link, media_mode)
+      icon = create_icon(link, save_cover)
     except Exception as e:
       print('Ran into an error while creating the icon object. Blame the dev :(')
       for line in traceback.format_exception(None, e, e.__traceback__):
@@ -156,28 +169,21 @@ Media Mode:
       continue
 
     try:
-      f = open(folder + "\\desktop.ini", "w+")
+      with open(ini_path, "w+") as f:
+        f.write("[.ShellClassInfo]\nConfirmFileOp=0\n")
+        f.write("IconResource={},0".format(ico_file))
+        f.write("\nIconFile={}\nIconIndex=0".format(ico_file))
 
-      f.write("[.ShellClassInfo]\nConfirmFileOp=0\n")
-      f.write("IconResource={},0".format(ico_file.replace(folder, "").strip("\\")))
-      f.write("\nIconFile={}\nIconIndex=0".format(ico_file.replace(folder, "").strip("\\")))
+        if artwork_type is not None and len(artwork_type) > 0:
+          f.write("\nInfoTip={}".format(artwork_type))
 
-      if artwork_type is not None and len(artwork_type) > 0:
-        # If the result has a type, then using this as the info-tip for
-        # the desktop icon.
-        f.write("\nInfoTip={}".format(artwork_type))
-
-      # Closing the output stream.
-      # All the text will be written into `desktop.ini` file only when the
-      # output is being closed.
       f.close()
 
-      # Not marking the `desktop.ini` file as a system file.
-      # This will make sure that the file can be seen if display hidden
-      # items is enabled.
-      os.system('attrib +r \"{}\\{}\"'.format(os.getcwd(), folder))
-      os.system('attrib +h \"{}\\desktop.ini\"'.format(folder))
-      os.system('attrib +h \"{}\"'.format(icon))
+      os.system('attrib +h +s \"{}\"'.format(ini_path))
+      os.system('attrib +h \"{}\"'.format(ico_path))
+
+      if auto_mode:
+        print('Generated icon for folder "' + folder + '".')
     except Exception as e:
       print('Ran into an error while creating files. Blame the dev :(')
       for line in traceback.format_exception(None, e, e.__traceback__):
