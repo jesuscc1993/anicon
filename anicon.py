@@ -33,13 +33,13 @@ def get_name(folder_name: str) -> str:
   return folder_name.strip()
 
 
-def get_artwork(media_name: str, max_results: int = 5, mode: str = "anime") -> tuple:
+def get_artwork(media_name: str, max_results: int = 5, media_mode: str = "anime") -> tuple:
   print('\n' + media_name.title())
 
   results, counter, choice = None, 1, 0
-  if mode == "anime":
+  if media_mode == "anime":
     results = AnimeSearch(media_name).results
-  elif mode == "manga":
+  elif media_mode == "manga":
     results = MangaSearch(media_name).results
   else:
     raise Exception("Invalid mode specified")
@@ -71,7 +71,7 @@ def get_artwork(media_name: str, max_results: int = 5, mode: str = "anime") -> t
   return image_url, image_type
 
 
-def create_icon(img_link: str):
+def create_icon(img_link: str, media_mode: str):
   art = get(img_link)
   open(jpg_file, 'wb').write(art.content)
 
@@ -79,15 +79,17 @@ def create_icon(img_link: str):
   img = ImageOps.expand(img, (69, 0, 69, 0), fill=0)
   img = ImageOps.fit(img, (300, 300)).convert("RGBA")
 
-  datas = img.getdata()
+  imageData = img.getdata()
   new_data = []
-  for item in datas:
+  for item in imageData:
     if item[0] == 0 and item[1] == 0 and item[2] == 0:
       new_data.append((0, 0, 0, 0))
     else:
       new_data.append(item)
 
   img.putdata(new_data)
+  if media_mode == "anime":
+    os.remove(jpg_file)
   img.save(ico_file)
   img.close()
   return ico_file
@@ -99,11 +101,11 @@ For help, info and memes, check out
 https://github.com/notdedsec/anicon
 """)
   auto_mode = True if input('Use AutoMode? Y/N : ').upper() == 'Y' else False
-  max_res = input("Max Results (default 5): ")
+  max_results = input("Max Results (default 5): ")
   try:
-    max_res = int(max_res)
+    max_results = int(max_results)
   except ValueError:
-    max_res = 5
+    max_results = 5
 
   media_mode = input("""\
 
@@ -140,13 +142,13 @@ Media Mode:
       print('An icon is already present. Delete the older icon and `desktop.ini` file before applying a new icon')
       continue
 
-    link, artwork_type = get_artwork(name, max_results=max_res, mode=media_mode)
+    link, artwork_type = get_artwork(name, max_results, media_mode)
     if not link or not artwork_type:
       print("Skipping this folder...")
       continue
 
     try:
-      icon = create_icon(link)
+      icon = create_icon(link, media_mode)
     except Exception as e:
       print('Ran into an error while creating the icon object. Blame the dev :(')
       for line in traceback.format_exception(None, e, e.__traceback__):
