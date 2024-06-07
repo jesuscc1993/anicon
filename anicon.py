@@ -43,15 +43,14 @@ def get_artwork(media_name: str, max_results: int = 5, media_mode: str = "anime"
     raise Exception("Invalid mode specified")
 
   if not auto_mode:
-    print('\n' + media_name.title())
-    print("X - Skip this folder")
+    print(f'\n{media_name}\nX - Skip this folder')
 
   for result in results:
     if auto_mode:
       choice = 0
       break
     else:
-      print(str(counter) + ' - ' + result.title)
+      print(f"{counter} - [{result.type}] {result.title}")
 
     if counter == max_results:
       break
@@ -93,6 +92,14 @@ def create_icon(img_link: str, save_cover: bool):
   img.save(ico_path)
   img.close()
   return ico_path
+
+
+def handle_exception(e):
+    print('Ran into an error.')
+    for line in traceback.format_exception(None, e, e.__traceback__):
+        print(line, end="")
+    input("Press Enter to continue...")
+
 
 if __name__ == "__main__":
   print("""\
@@ -148,24 +155,22 @@ Media Mode:
     jpg_path = os.path.join(folder, 'cover.jpg')
 
     if os.path.isfile(ico_path):
-      print('Skipping folder "' + folder + '", which already has an icon.')
+      print(f'Skipping folder "{folder}", which already has an icon.')
       continue
 
     for file_path in [ico_path, ini_path, jpg_path]:
       if os.path.isfile(file_path):
         os.remove(file_path)
 
-    link, artwork_type = get_artwork(name, max_results, media_mode)
-    if not link or not artwork_type:
+    artwork_url, artwork_type = get_artwork(name, max_results, media_mode)
+    if not artwork_url or not artwork_type:
       print("Skipping this folder...")
       continue
 
     try:
-      icon = create_icon(link, save_cover)
+      icon = create_icon(artwork_url, save_cover)
     except Exception as e:
-      print('Ran into an error while creating the icon object. Blame the dev :(')
-      for line in traceback.format_exception(None, e, e.__traceback__):
-        print(line, end="")
+      handle_exception(e)
       continue
 
     try:
@@ -174,18 +179,17 @@ Media Mode:
         f.write("IconResource={},0".format(ico_file))
         f.write("\nIconFile={}\nIconIndex=0".format(ico_file))
 
-        if artwork_type is not None and len(artwork_type) > 0:
+        if artwork_type:
           f.write("\nInfoTip={}".format(artwork_type))
 
       f.close()
 
       os.system('attrib +h +s \"{}\"'.format(ini_path))
       os.system('attrib +h \"{}\"'.format(ico_path))
+      os.system('attrib +s \"{}\"'.format(folder))
 
       if auto_mode:
-        print('Generated icon for folder "' + folder + '".')
+        print(f'Generated icon for folder "{folder}".')
     except Exception as e:
-      print('Ran into an error while creating files. Blame the dev :(')
-      for line in traceback.format_exception(None, e, e.__traceback__):
-        print(line, end="")
+      handle_exception(e)
       continue
