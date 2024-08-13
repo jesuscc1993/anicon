@@ -106,10 +106,9 @@ if __name__ == "__main__":
   print("""\
 Run this in your anime/manga folder
 For help and info, check out
-https://github.com/jesuscc1993/anicon
-""")
+https://github.com/jesuscc1993/anicon""")
 
-  auto_mode = input("""\
+  auto_mode = input("""
 Use AutoMode? Y/N:
 (Default = N)
 > """).upper() == 'Y'
