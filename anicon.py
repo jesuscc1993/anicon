@@ -43,14 +43,15 @@ def get_artwork(media_name: str, max_results: int = 5, media_mode: str = "anime"
     raise Exception("Invalid mode specified")
 
   if not auto_mode:
-    print(f'\n{media_name}\nX - Skip this folder')
+    print(f'\n{media_name}\n X  Skip this folder')
 
   for result in results:
     if auto_mode:
       choice = 0
       break
     else:
-      print(f"{counter} - [{result.type}] {result.title}")
+      counter_str = f"({counter})" if counter == 1 else f" {counter} "
+      print(f"{counter_str} [{result.type}] {result.title}")
 
     if counter == max_results:
       break
@@ -104,29 +105,38 @@ def handle_exception(e):
 if __name__ == "__main__":
   print("""\
 Run this in your anime/manga folder
-For help, info and memes, check out
+For help and info, check out
 https://github.com/jesuscc1993/anicon
 """)
-  auto_mode = input('Use AutoMode? Y/N (default N): ').upper() == 'Y'
+
+  auto_mode = input("""\
+Use AutoMode? Y/N:
+(Default = N)
+> """).upper() == 'Y'
 
   if auto_mode:
     max_results = 1
   else:
-    max_results = input("Max Results (default 5): ")
+    max_results = input("""
+Max Results:
+(Default = 5)
+> """)
     try:
       max_results = int(max_results)
     except ValueError:
       max_results = 5
 
-  media_mode = input("""\
-
+  media_mode = input("""
 Media Mode:
-1. anime (default)
-2. manga
+(1) anime
+ 2  manga
 > """)
   if media_mode == "2":
     media_mode = "manga"
-    save_cover = input('Save cover? Y/N (default Y): ').upper() != 'N'
+    save_cover = input("""
+Save cover? Y/N:
+(Default = Y)
+> """).upper() != 'N'
   else:
     media_mode = "anime"
     save_cover = False
