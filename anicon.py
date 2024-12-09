@@ -8,7 +8,9 @@ from PIL import Image, ImageOps
 from mal import AnimeSearch, MangaSearch
 from requests import get
 
-filterwarnings("ignore")
+filterwarnings('ignore')
+
+SKIPPED_ALREADY_EXISTING = 'Skipping "{folder}", which already has an icon.'
 
 def get_name(folder_name: str) -> str:
   last_words = ['bd', 's0', '480p', '720p', '1080p']
@@ -22,25 +24,24 @@ def get_name(folder_name: str) -> str:
   for word in words_to_remove:
     folder_name = folder_name.replace(word, '')
 
-  folder_name = re.sub(r"(?<=\[)(.*?)(?=])", '', folder_name)
-  folder_name = re.sub(r"(?<=\()(.*?)(?=\))", '', folder_name)
+  folder_name = re.sub(r'(?<=\[)(.*?)(?=])', '', folder_name)
+  folder_name = re.sub(r'(?<=\()(.*?)(?=\))', '', folder_name)
   folder_name = folder_name.replace('()', '').replace('[]', '')
 
   for word in last_words:
-    regex_str = "(?<=" + word + ").*$"
+    regex_str = '(?<' + word + ').*$'
     folder_name = re.sub(regex_str, '', folder_name, flags=re.DOTALL).replace(word, '')
 
   return folder_name.strip()
 
-
-def get_artwork(media_name: str, max_results: int = 5, media_mode: str = "anime") -> tuple:
+def get_artwork(media_name: str, max_results: int = 5, media_mode: str = 'anime') -> tuple:
   results, counter, choice = None, 1, 0
-  if media_mode == "anime":
+  if media_mode == 'anime':
     results = AnimeSearch(media_name).results
-  elif media_mode == "manga":
+  elif media_mode == 'manga':
     results = MangaSearch(media_name).results
   else:
-    raise Exception("Invalid mode specified")
+    raise Exception('Invalid mode specified')
 
   if not auto_mode:
     print(f'\n{media_name}\n X  Skip this folder')
@@ -50,8 +51,8 @@ def get_artwork(media_name: str, max_results: int = 5, media_mode: str = "anime"
       choice = 0
       break
     else:
-      counter_str = f"({counter})" if counter == 1 else f" {counter} "
-      print(f"{counter_str} [{result.type}] {result.title}")
+      counter_str = f'({counter})' if counter == 1 else f' {counter} '
+      print(f'{counter_str} [{result.type}] {result.title}')
 
     if counter == max_results:
       break
@@ -61,7 +62,7 @@ def get_artwork(media_name: str, max_results: int = 5, media_mode: str = "anime"
     choice = input('> ')
     if choice == '':
       choice = 1
-    elif choice.upper() == "X":
+    elif choice.upper() == 'X':
       return None, None
     choice = int(choice) - 1
 
@@ -70,14 +71,13 @@ def get_artwork(media_name: str, max_results: int = 5, media_mode: str = "anime"
 
   return image_url, image_type
 
-
 def create_icon(img_link: str, save_cover: bool):
   art = get(img_link)
   open(jpg_path, 'wb').write(art.content)
 
   img = Image.open(jpg_path)
   img = ImageOps.expand(img, (69, 0, 69, 0), fill=0)
-  img = ImageOps.fit(img, (300, 300)).convert("RGBA")
+  img = ImageOps.fit(img, (300, 300)).convert('RGBA')
 
   imageData = img.getdata()
   new_data = []
@@ -94,50 +94,48 @@ def create_icon(img_link: str, save_cover: bool):
   img.close()
   return ico_path
 
-
 def handle_exception(e):
     print('Ran into an error.')
     for line in traceback.format_exception(None, e, e.__traceback__):
-        print(line, end="")
-    input("Press Enter to continue...")
+        print(line, end='')
+    input('Press Enter to continue...')
 
-
-if __name__ == "__main__":
-  print("""\
+if __name__ == '__main__':
+  print('''\
 Run this in your anime/manga folder
 For help and info, check out
-https://github.com/jesuscc1993/anicon""")
+https://github.com/jesuscc1993/anicon''')
 
-  auto_mode = input("""
+  auto_mode = input('''
 Use AutoMode? Y/N:
 (Default = N)
-> """).upper() == 'Y'
+> ''').upper() == 'Y'
 
   if auto_mode:
     max_results = 1
   else:
-    max_results = input("""
+    max_results = input('''
 Max Results:
 (Default = 5)
-> """)
+> ''')
     try:
       max_results = int(max_results)
     except ValueError:
       max_results = 5
 
-  media_mode = input("""
+  media_mode = input('''
 Media Mode:
 (1) anime
  2  manga
-> """)
-  if media_mode == "2":
-    media_mode = "manga"
-    save_cover = input("""
+> ''')
+  if media_mode == '2':
+    media_mode = 'manga'
+    save_cover = input('''
 Save cover? Y/N:
 (Default = Y)
-> """).upper() != 'N'
+> ''').upper() != 'N'
   else:
-    media_mode = "anime"
+    media_mode = 'anime'
     save_cover = False
 
   folder_list = next(os.walk('.'))[1]
@@ -156,16 +154,22 @@ Save cover? Y/N:
     # path, now performing a search for the directory name.
     name = name.rpartition('\\')[2].strip()
 
-    icon_name = re.sub("[^A-Za-z0-9_,. ()-]", "_", name)
-    
+    icon_name = re.sub('[^A-Za-z0-9_,. ()-]', '_', name)
+
     ico_file = icon_name + '.ico'
     ico_path = os.path.join(folder, ico_file)
     ini_path = os.path.join(folder, 'desktop.ini')
     jpg_path = os.path.join(folder, 'cover.jpg')
 
     if os.path.isfile(ico_path):
-      print(f'Skipping folder "{folder}", which already has an icon.')
+      print(SKIPPED_ALREADY_EXISTING.format(folder=folder))
       continue
+
+    if os.path.isfile(ini_path):
+      with open(ini_path, 'r') as f:
+        if 'IconResource' in f.read():
+          print(SKIPPED_ALREADY_EXISTING.format(folder=folder))
+          continue
 
     for file_path in [ico_path, ini_path, jpg_path]:
       if os.path.isfile(file_path):
@@ -173,7 +177,7 @@ Save cover? Y/N:
 
     artwork_url, artwork_type = get_artwork(name, max_results, media_mode)
     if not artwork_url or not artwork_type:
-      print("Skipping this folder...")
+      print('Skipping "{folder}" since artwork could not be retrieved.')
       continue
 
     try:
@@ -183,13 +187,13 @@ Save cover? Y/N:
       continue
 
     try:
-      with open(ini_path, "w+") as f:
-        f.write("[.ShellClassInfo]\nConfirmFileOp=0\n")
-        f.write("IconResource={},0".format(ico_file))
-        f.write("\nIconFile={}\nIconIndex=0".format(ico_file))
+      with open(ini_path, 'w+') as f:
+        f.write('[.ShellClassInfo]\nConfirmFileOp=0\n')
+        f.write('IconResource={},0'.format(ico_file))
+        f.write('\nIconFile={}\nIconIndex=0'.format(ico_file))
 
         if artwork_type:
-          f.write("\nInfoTip={}".format(artwork_type))
+          f.write('\nInfoTip={}'.format(artwork_type))
 
       f.close()
 
@@ -202,3 +206,5 @@ Save cover? Y/N:
     except Exception as e:
       handle_exception(e)
       continue
+
+  input('Press Enter to exit...')
