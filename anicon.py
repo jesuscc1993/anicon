@@ -10,26 +10,25 @@ from requests import get
 
 filterwarnings('ignore')
 
+LAST_WORDS = ['BD', 'S0', '480P', '720P', '1080P']
+WORDS_TO_REMOVE = [
+  'BLURAY', 'X265', 'X264', 'HEVC', 'HI10P', 'AVC', '10BIT', 'DUAL',
+  'AUDIO', 'ENG', 'ENGLISH', 'SUBBED', 'SUB', 'DUBBED', 'DUB'
+]
 SKIPPED_ALREADY_EXISTING = 'Skipping "{folder}", which already has an icon.'
 
 def get_name(folder_name: str) -> str:
-  last_words = ['bd', 's0', '480p', '720p', '1080p']
-  words_to_remove = [
-    'bluray', 'x265', 'x264', 'hevc', 'hi10p', 'avc', '10bit', 'dual',
-    'audio', 'eng', 'english', 'subbed', 'sub', 'dubbed', 'dub'
-  ]
-
   folder_name = folder_name.replace('_', ' ').replace('.', ' ')
 
-  for word in words_to_remove:
+  for word in WORDS_TO_REMOVE:
     folder_name = folder_name.replace(word, '')
 
   folder_name = re.sub(r'(?<=\[)(.*?)(?=])', '', folder_name)
   folder_name = re.sub(r'(?<=\()(.*?)(?=\))', '', folder_name)
   folder_name = folder_name.replace('()', '').replace('[]', '')
 
-  for word in last_words:
-    regex_str = '(?<' + word + ').*$'
+  for word in LAST_WORDS:
+    regex_str = r'\b' + re.escape(word) + r'\b.*$'
     folder_name = re.sub(regex_str, '', folder_name, flags=re.DOTALL).replace(word, '')
 
   return folder_name.strip()
@@ -177,7 +176,7 @@ Save cover? Y/N:
 
     artwork_url, artwork_type = get_artwork(name, max_results, media_mode)
     if not artwork_url or not artwork_type:
-      print('Skipping "{folder}" since artwork could not be retrieved.')
+      print(f'Skipping "{folder}" since artwork could not be retrieved.')
       continue
 
     try:
