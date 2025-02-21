@@ -90,10 +90,11 @@ Yeah, the most efficient way to use this (imo) would be to:
 ### Requirements
 
 Run `pip install -r requirements.txt` to install required repositories.
+Run `pip install pyinstaller` to install the dependency that builds the EXE out of the PY script.
 
 ### Build
 
-Then in the directory run `pyinstaller anicon.py --onefile`
+Run `build.bat`.
 
 ### I was promised memes. Gib memes.
 
