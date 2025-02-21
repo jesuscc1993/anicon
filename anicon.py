@@ -70,11 +70,19 @@ def get_artwork(media_name: str, max_results: int = 5, media_mode: str = 'anime'
 
   return image_url, image_type
 
-def create_icon(img_link: str, save_cover: bool):
+def download_cover(img_link: str):
   art = get(img_link)
-  open(jpg_path, 'wb').write(art.content)
+  open(cover_image_path, 'wb').write(art.content)
 
-  img = Image.open(jpg_path)
+def create_icon(keep_cover: bool):
+  if os.path.isfile(cover_image_path):
+    img_path = cover_image_path
+  elif os.path.isfile(folder_image_path):
+    img_path = folder_image_path
+  else:
+    raise FileNotFoundError("No cover image found")
+
+  img = Image.open(img_path)
   img = ImageOps.expand(img, (69, 0, 69, 0), fill=0)
   img = ImageOps.fit(img, (300, 300)).convert('RGBA')
 
@@ -87,8 +95,8 @@ def create_icon(img_link: str, save_cover: bool):
       new_data.append(item)
 
   img.putdata(new_data)
-  if (not save_cover):
-    os.remove(jpg_path)
+  if (not keep_cover):
+    os.remove(cover_image_path)
   img.save(ico_path)
   img.close()
   return ico_path
@@ -129,13 +137,13 @@ Media Mode:
 > ''')
   if media_mode == '2':
     media_mode = 'manga'
-    save_cover = input('''
+    keep_cover = input('''
 Save cover? Y/N:
 (Default = Y)
 > ''').upper() != 'N'
   else:
     media_mode = 'anime'
-    save_cover = False
+    keep_cover = False
 
   folder_list = next(os.walk('.'))[1]
   if folder_list is None or len(folder_list) == 0:
@@ -158,34 +166,42 @@ Save cover? Y/N:
     ico_file = icon_name + '.ico'
     ico_path = os.path.join(folder, ico_file)
     ini_path = os.path.join(folder, 'desktop.ini')
-    jpg_path = os.path.join(folder, 'cover.jpg')
+    cover_image_path = os.path.join(folder, 'cover.jpg')
+    folder_image_path = os.path.join(folder, 'folder.jpg')
 
-    if os.path.isfile(ico_path):
-      print(SKIPPED_ALREADY_EXISTING.format(folder=folder))
-      continue
+    try:
+      if os.path.isfile(ico_path):
+        print(SKIPPED_ALREADY_EXISTING.format(folder=folder))
+        continue
 
-    if os.path.isfile(ini_path):
-      with open(ini_path, 'r') as f:
-        if 'IconResource' in f.read():
-          print(SKIPPED_ALREADY_EXISTING.format(folder=folder))
+      if os.path.isfile(ini_path):
+        with open(ini_path, 'r') as f:
+          if 'IconResource' in f.read():
+            print(SKIPPED_ALREADY_EXISTING.format(folder=folder))
+            continue
+
+      artwork_url, artwork_type = None, None
+      if os.path.isfile(cover_image_path) or os.path.isfile(folder_image_path):
+        print(f'Using already existing cover image for "{folder}".')
+        keep_cover = True
+      else:
+        for file_path in [ico_path, ini_path]:
+          if os.path.isfile(file_path):
+            os.remove(file_path)
+
+        artwork_url, artwork_type = get_artwork(name, max_results, media_mode)
+        if not artwork_url or not artwork_type:
+          print(f'Skipping "{folder}" since artwork could not be retrieved.')
           continue
 
-    for file_path in [ico_path, ini_path, jpg_path]:
-      if os.path.isfile(file_path):
-        os.remove(file_path)
+        try:
+          download_cover(artwork_url)
+        except Exception as e:
+          handle_exception(e)
+          continue
 
-    artwork_url, artwork_type = get_artwork(name, max_results, media_mode)
-    if not artwork_url or not artwork_type:
-      print(f'Skipping "{folder}" since artwork could not be retrieved.')
-      continue
+      create_icon(keep_cover)
 
-    try:
-      icon = create_icon(artwork_url, save_cover)
-    except Exception as e:
-      handle_exception(e)
-      continue
-
-    try:
       with open(ini_path, 'w+') as f:
         f.write('[.ShellClassInfo]\nConfirmFileOp=0\n')
         f.write('IconResource={},0'.format(ico_file))
