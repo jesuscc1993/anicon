@@ -1,12 +1,14 @@
+import argparse
 import os
 import re
+import sys
 import traceback
-from warnings import filterwarnings
 
 from PIL import Image, ImageOps
 # noinspection PyPackageRequirements
 from mal import AnimeSearch, MangaSearch
 from requests import get
+from warnings import filterwarnings
 
 filterwarnings('ignore')
 
@@ -102,10 +104,10 @@ def create_icon(keep_cover: bool):
   return ico_path
 
 def handle_exception(e):
-    print('Ran into an error.')
-    for line in traceback.format_exception(None, e, e.__traceback__):
-        print(line, end='')
-    input('Press Enter to continue...')
+  print('Ran into an error.')
+  for line in traceback.format_exception(None, e, e.__traceback__):
+    print(line, end = '')
+  input('Press Enter to continue...')
 
 if __name__ == '__main__':
   print('''\
@@ -113,37 +115,59 @@ Run this in your anime/manga folder
 For help and info, check out
 https://github.com/jesuscc1993/anicon''')
 
-  auto_mode = input('''
-Use AutoMode? Y/N:
+  if len(sys.argv) > 1:
+    parser = argparse.ArgumentParser(add_help=True)
+    parser.add_argument('--auto-mode', '-a', action='store_true', help='Use AutoMode (non-interactive)')
+    parser.add_argument('--max-results', '-n', type=int, help='Max results to show (default 5)')
+    parser.add_argument('--media-mode', '-m', choices=['anime', 'manga'], help='Media mode: anime or manga')
+    parser.add_argument('--keep-cover', '-k', choices=['y', 'n'], help='Save cover? (y/n)')
+    args = parser.parse_args()
+
+    auto_mode = bool(args.auto_mode)
+    max_results = 1 if auto_mode else (args.max_results if args.max_results is not None else 5)
+    media_mode = args.media_mode or 'anime'
+    keep_cover = args.keep_cover.lower() == 'y' if args.keep_cover is not None else (media_mode == 'manga')
+
+    print('''
+Using arguments:
+  Auto Mode   : {}
+  Max Results : {}
+  Media Mode  : {}
+  Keep Cover  : {}
+'''.format(auto_mode, max_results, media_mode, keep_cover))
+
+  else:
+    auto_mode = input('''
+Use Auto Mode? Y/N:
 (Default = N)
 > ''').upper() == 'Y'
 
-  if auto_mode:
-    max_results = 1
-  else:
-    max_results = input('''
+    if auto_mode:
+      max_results = 1
+    else:
+      max_results = input('''
 Max Results:
 (Default = 5)
 > ''')
-    try:
-      max_results = int(max_results)
-    except ValueError:
-      max_results = 5
+      try:
+        max_results = int(max_results)
+      except ValueError:
+        max_results = 5
 
-  media_mode = input('''
+    media_mode = input('''
 Media Mode:
 (1) anime
  2  manga
 > ''')
-  if media_mode == '2':
-    media_mode = 'manga'
-    keep_cover = input('''
+    if media_mode == '2':
+      media_mode = 'manga'
+      keep_cover = input('''
 Save cover? Y/N:
 (Default = Y)
 > ''').upper() != 'N'
-  else:
-    media_mode = 'anime'
-    keep_cover = False
+    else:
+      media_mode = 'anime'
+      keep_cover = False
 
   folder_list = next(os.walk('.'))[1]
   if folder_list is None or len(folder_list) == 0:
