@@ -1,5 +1,37 @@
 (Forked from [notdedsec/anicon](https://github.com/notdedsec/anicon)).
 
+## Changes to the original
+
+- Fixed some issues.
+- Added support for manga.
+- Added support for commandlline arguments:
+
+# Command-line arguments
+
+Usage: `anicon.exe [options]`.
+
+| Option                | Description                               | Type    | Default                               | Example               |
+| --------------------- | ----------------------------------------- | ------- | ------------------------------------- | --------------------- |
+| `--auto-mode`, `-a`   | Picks the first result for each media     | Flag    | `N`                                   | `anicon.exe -a`       |
+| `--keep-cover`, `-k`  | Keep the cover image                      | Flag    | `False` for anime<br>`True` for manga | `anicon.exe -k`       |
+| `--max-results`, `-n` | Maximum number of results to show         | Integer | `5`                                   | `anicon.exe -n 10`    |
+| `--media-type`, `-m`  | Media type to search (`anime` \| `manga`) | String  | `anime`                               | `anicon.exe -m anime` |
+
+**Example:** `anicon.exe -a -m anime -n 10 -k`.
+
+## Building from source
+
+### Requirements
+
+Run `pip install -r requirements.txt` to install required repositories.
+Run `pip install pyinstaller` to install the dependency that builds the EXE out of the PY script.
+
+### Build
+
+Run `build.bat`.
+
+<br><br>
+
 ### _Original readme:_
 
 # Anicon
@@ -84,17 +116,6 @@ Yeah, the most efficient way to use this (imo) would be to:
 - Run it in AutoMode first so all folders are processed
 - Move out the incorrectly tagged folders and delete their icons
 - Run it in ManualMode and choose the correct results
-
-## Building from source
-
-### Requirements
-
-Run `pip install -r requirements.txt` to install required repositories.
-Run `pip install pyinstaller` to install the dependency that builds the EXE out of the PY script.
-
-### Build
-
-Run `build.bat`.
 
 ### I was promised memes. Gib memes.
 

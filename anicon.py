@@ -35,11 +35,11 @@ def get_name(folder_name: str) -> str:
 
   return folder_name.strip()
 
-def get_artwork(media_name: str, max_results: int = 5, media_mode: str = 'anime') -> tuple:
+def get_artwork(media_name: str, max_results: int = 5, media_type: str = 'anime') -> tuple:
   results, counter, choice = None, 1, 0
-  if media_mode == 'anime':
+  if media_type == 'anime':
     results = AnimeSearch(media_name).results
-  elif media_mode == 'manga':
+  elif media_type == 'manga':
     results = MangaSearch(media_name).results
   else:
     raise Exception('Invalid mode specified')
@@ -119,22 +119,22 @@ https://github.com/jesuscc1993/anicon''')
     parser = argparse.ArgumentParser(add_help=True)
     parser.add_argument('--auto-mode', '-a', action='store_true', help='Use AutoMode (non-interactive)')
     parser.add_argument('--max-results', '-n', type=int, help='Max results to show (default 5)')
-    parser.add_argument('--media-mode', '-m', choices=['anime', 'manga'], help='Media mode: anime or manga')
-    parser.add_argument('--keep-cover', '-k', choices=['y', 'n'], help='Save cover? (y/n)')
+    parser.add_argument('--media-type', '-m', choices=['anime', 'manga'], help='Media type: (anime/manga)')
+    parser.add_argument('--keep-cover', '-k', action='store_true', help='Save cover image')
     args = parser.parse_args()
 
     auto_mode = bool(args.auto_mode)
     max_results = 1 if auto_mode else (args.max_results if args.max_results is not None else 5)
-    media_mode = args.media_mode or 'anime'
-    keep_cover = args.keep_cover.lower() == 'y' if args.keep_cover is not None else (media_mode == 'manga')
+    media_type = args.media_type or 'anime'
+    keep_cover = args.keep_cover if args.keep_cover is not None else (media_type == 'manga')
 
     print('''
 Using arguments:
-  Auto Mode   : {}
-  Max Results : {}
-  Media Mode  : {}
-  Keep Cover  : {}
-'''.format(auto_mode, max_results, media_mode, keep_cover))
+  auto_mode   : {}
+  max_results : {}
+  media_type  : {}
+  keep_cover  : {}
+'''.format(auto_mode, max_results, media_type, keep_cover))
 
   else:
     auto_mode = input('''
@@ -154,19 +154,19 @@ Max Results:
       except ValueError:
         max_results = 5
 
-    media_mode = input('''
-Media Mode:
+    media_type = input('''
+Media Type:
 (1) anime
  2  manga
 > ''')
-    if media_mode == '2':
-      media_mode = 'manga'
+    if media_type == '2':
+      media_type = 'manga'
       keep_cover = input('''
 Save cover? Y/N:
 (Default = Y)
 > ''').upper() != 'N'
     else:
-      media_mode = 'anime'
+      media_type = 'anime'
       keep_cover = False
 
   folder_list = next(os.walk('.'))[1]
@@ -213,7 +213,7 @@ Save cover? Y/N:
           if os.path.isfile(file_path):
             os.remove(file_path)
 
-        artwork_url, artwork_type = get_artwork(name, max_results, media_mode)
+        artwork_url, artwork_type = get_artwork(name, max_results, media_type)
         if not artwork_url or not artwork_type:
           print(f'Skipping "{folder}" since artwork could not be retrieved.')
           continue
