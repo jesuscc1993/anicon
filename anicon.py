@@ -82,24 +82,24 @@ def create_icon(keep_cover: bool):
   elif os.path.isfile(folder_image_path):
     img_path = folder_image_path
   else:
-    raise FileNotFoundError("No cover image found")
+    raise FileNotFoundError('No cover image found')
 
   img = Image.open(img_path)
-  img = ImageOps.expand(img, (69, 0, 69, 0), fill=0)
-  img = ImageOps.fit(img, (300, 300)).convert('RGBA')
+  img = ImageOps.pad(img, (256, 256), color=(0, 0, 0, 0)).convert('RGBA')
 
-  imageData = img.getdata()
   new_data = []
-  for item in imageData:
+  for item in img.getdata():
     if item[0] == 0 and item[1] == 0 and item[2] == 0:
       new_data.append((0, 0, 0, 0))
     else:
       new_data.append(item)
 
   img.putdata(new_data)
-  if (not keep_cover):
+
+  if not keep_cover:
     os.remove(cover_image_path)
-  img.save(ico_path)
+
+  img.save(ico_path, format='ICO', sizes=[(256, 48), (256, 256), (16, 16)])
   img.close()
   return ico_path
 
