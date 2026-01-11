@@ -12,27 +12,21 @@ from warnings import filterwarnings
 
 filterwarnings('ignore')
 
-LAST_WORDS = ['BD', 'S0', '480P', '720P', '1080P']
-WORDS_TO_REMOVE = [
-  'BLURAY', 'X265', 'X264', 'HEVC', 'HI10P', 'AVC', '10BIT', 'DUAL',
-  'AUDIO', 'ENG', 'ENGLISH', 'SUBBED', 'SUB', 'DUBBED', 'DUB'
-]
+COVER_IMAGE_FILENAME = 'cover.jpg'
+FOLDER_IMAGE_FILENAME = 'folder.jpg'
+
 SKIPPED_ALREADY_EXISTING = 'Skipping "{folder}", which already has an icon.'
 
+WORDS_TO_REMOVE_REGEX = r'\b(?:BLURAY|X265|X264|HEVC|HI10P|AVC|10BIT|DUAL|AUDIO|ENG|ENGLISH|SUBBED|SUB|DUBBED|DUB)\b'
+LAST_WORDS_REGEX = r'\b(?:BD|S0|480P|720P|1080P)\b.*$'
+
+BRACKETS_OR_PARENS_REGEX = r'\[[^\]]*\]|\([^\)]*\)|\(\)|\[\]'
+
 def get_name(folder_name: str) -> str:
-  folder_name = folder_name.replace('_', ' ').replace('.', ' ')
-
-  for word in WORDS_TO_REMOVE:
-    folder_name = folder_name.replace(word, '')
-
-  folder_name = re.sub(r'(?<=\[)(.*?)(?=])', '', folder_name)
-  folder_name = re.sub(r'(?<=\()(.*?)(?=\))', '', folder_name)
-  folder_name = folder_name.replace('()', '').replace('[]', '')
-
-  for word in LAST_WORDS:
-    regex_str = r'\b' + re.escape(word) + r'\b.*$'
-    folder_name = re.sub(regex_str, '', folder_name, flags=re.DOTALL).replace(word, '')
-
+  folder_name = re.sub(r'[_.]', ' ', folder_name)
+  folder_name = re.sub(WORDS_TO_REMOVE_REGEX, '', folder_name, flags = re.IGNORECASE)
+  folder_name = re.sub(BRACKETS_OR_PARENS_REGEX, '', folder_name, flags = re.IGNORECASE)
+  folder_name = re.sub(LAST_WORDS_REGEX, '', folder_name, flags = re.IGNORECASE)
   return folder_name.strip()
 
 def get_artwork(media_name: str, max_results: int = 5, media_type: str = 'anime') -> tuple:
@@ -190,8 +184,8 @@ Save cover? Y/N:
     ico_file = icon_name + '.ico'
     ico_path = os.path.join(folder, ico_file)
     ini_path = os.path.join(folder, 'desktop.ini')
-    cover_image_path = os.path.join(folder, 'cover.jpg')
-    folder_image_path = os.path.join(folder, 'folder.jpg')
+    cover_image_path = os.path.join(folder, COVER_IMAGE_FILENAME)
+    folder_image_path = os.path.join(folder, FOLDER_IMAGE_FILENAME)
 
     try:
       if os.path.isfile(ico_path):
