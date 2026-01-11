@@ -14,8 +14,9 @@ filterwarnings('ignore')
 
 COVER_IMAGE_FILENAME = 'cover.jpg'
 FOLDER_IMAGE_FILENAME = 'folder.jpg'
+DESKTOP_INI_FILENAME = 'desktop.ini'
 
-SKIPPED_ALREADY_EXISTING = 'Skipping "{folder}", which already has an icon.'
+SKIPPED_ALREADY_EXISTING = 'Skipping "{}", which already has an icon.'
 
 WORDS_TO_REMOVE_REGEX = r'\b(?:BLURAY|X265|X264|HEVC|HI10P|AVC|10BIT|DUAL|AUDIO|ENG|ENGLISH|SUBBED|SUB|DUBBED|DUB)\b'
 LAST_WORDS_REGEX = r'\b(?:BD|S0|480P|720P|1080P)\b.*$'
@@ -183,19 +184,19 @@ Save cover? Y/N:
 
     ico_file = icon_name + '.ico'
     ico_path = os.path.join(folder, ico_file)
-    ini_path = os.path.join(folder, 'desktop.ini')
+    ini_path = os.path.join(folder, DESKTOP_INI_FILENAME)
     cover_image_path = os.path.join(folder, COVER_IMAGE_FILENAME)
     folder_image_path = os.path.join(folder, FOLDER_IMAGE_FILENAME)
 
     try:
       if os.path.isfile(ico_path):
-        print(SKIPPED_ALREADY_EXISTING.format(folder=folder))
+        print(SKIPPED_ALREADY_EXISTING.format(folder))
         continue
 
       if os.path.isfile(ini_path):
         with open(ini_path, 'r') as f:
           if 'IconResource' in f.read():
-            print(SKIPPED_ALREADY_EXISTING.format(folder=folder))
+            print(SKIPPED_ALREADY_EXISTING.format(folder))
             continue
 
       artwork_url, artwork_type = None, None
