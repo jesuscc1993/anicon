@@ -71,7 +71,7 @@ def download_cover(img_link: str):
   art = get(img_link)
   open(cover_image_path, 'wb').write(art.content)
 
-def create_icon(keep_cover: bool):
+def create_icon(keep_cover: bool, ratio: tuple = None):
   if os.path.isfile(cover_image_path):
     img_path = cover_image_path
   elif os.path.isfile(folder_image_path):
@@ -80,6 +80,22 @@ def create_icon(keep_cover: bool):
     raise FileNotFoundError('No cover image found')
 
   img = Image.open(img_path)
+  if ratio is not None:
+    w, h = img.size
+    x, y = ratio
+    target_ratio = x / y
+    current_ratio = w / h
+    if current_ratio > target_ratio:
+      new_w = int(h * target_ratio)
+      left = (w - new_w) // 2
+      right = left + new_w
+      img = img.crop((left, 0, right, h))
+    elif current_ratio < target_ratio:
+      new_h = int(w / target_ratio)
+      top = (h - new_h) // 2
+      bottom = top + new_h
+      img = img.crop((0, top, w, bottom))
+
   img = ImageOps.pad(img, (256, 256), color=(0, 0, 0, 0)).convert('RGBA')
 
   new_data = []
@@ -116,12 +132,22 @@ https://github.com/jesuscc1993/anicon''')
     parser.add_argument('--max-results', '-n', type=int, help='Max results to show (default 5)')
     parser.add_argument('--media-type', '-m', choices=['anime', 'manga'], help='Media type: (anime/manga)')
     parser.add_argument('--keep-cover', '-k', action='store_true', help='Save cover image')
+    parser.add_argument('--ratio', '-r', type=str, help='Aspect ratio for icon crop (e.g. 2/3)')
     args = parser.parse_args()
 
     auto_mode = bool(args.auto_mode)
     max_results = 1 if auto_mode else (args.max_results if args.max_results is not None else 5)
     media_type = args.media_type or 'anime'
     keep_cover = args.keep_cover if args.keep_cover is not None else (media_type == 'manga')
+
+    ratio = None
+    if args.ratio:
+      try:
+        parts = args.ratio.split('/')
+        if len(parts) == 2:
+          ratio = (int(parts[0]), int(parts[1]))
+      except Exception:
+        print('Invalid ratio format, should be x/y (e.g. 16/9)')
 
     print('''
 Using arguments:
@@ -219,7 +245,7 @@ Save cover? Y/N:
           handle_exception(e)
           continue
 
-      create_icon(keep_cover)
+      create_icon(keep_cover, ratio)
 
       with open(ini_path, 'w+') as f:
         f.write('[.ShellClassInfo]\nConfirmFileOp=0\n')
