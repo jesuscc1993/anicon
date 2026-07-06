@@ -16,8 +16,9 @@ Usage: `anicon.exe [options]`.
 | `--keep-cover`, `-k`  | Keep the cover image                      | Flag    | `False` for anime<br>`True` for manga | `anicon.exe -k`       |
 | `--max-results`, `-n` | Maximum number of results to show         | Integer | `5`                                   | `anicon.exe -n 10`    |
 | `--media-type`, `-m`  | Media type to search (`anime` \| `manga`) | String  | `anime`                               | `anicon.exe -m anime` |
+| `--ratio`, `-r`       | Aspect ratio to crop the cover to         | Float   | `None`                                | `anicon.exe -r 0.67`  |
 
-**Example:** `anicon.exe -a -m anime -n 10 -k`.
+**Example:** `anicon.exe -a -m anime -n 10 -k -r 0.67`.
 
 ## Building from source
 
