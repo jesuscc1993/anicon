@@ -98,16 +98,8 @@ def create_icon(keep_cover: bool, target_ratio: float = None):
 
       img = img.crop((x0, y0, x1, y1))
 
-  img = ImageOps.pad(img, (256, 256), color=(0, 0, 0, 0)).convert('RGBA')
-
-  new_data = []
-  for item in img.getdata():
-    if item[0] == 0 and item[1] == 0 and item[2] == 0:
-      new_data.append((0, 0, 0, 0))
-    else:
-      new_data.append(item)
-
-  img.putdata(new_data)
+  img = img.convert('RGBA')
+  img = ImageOps.pad(img, (256, 256), color=(0, 0, 0, 0))
 
   if not keep_cover:
     os.remove(cover_image_path)
