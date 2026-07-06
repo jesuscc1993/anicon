@@ -176,6 +176,8 @@ Save cover? Y/N:
       media_type = 'anime'
       keep_cover = False
 
+    ratio = None
+
   folder_list = next(os.walk('.'))[1]
   if folder_list is None or len(folder_list) == 0:
     # In case the file is placed inside an innermost directory which
