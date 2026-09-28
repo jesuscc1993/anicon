@@ -12,6 +12,8 @@ from warnings import filterwarnings
 
 filterwarnings('ignore')
 
+IMAGE_EXTENSIONS = ['.ico', '.jpeg', '.jpg', '.png', '.webp']
+
 COVER_IMAGE_FILENAME = 'cover'
 COVER_IMAGE_EXTENSION = '.jpg'
 
@@ -114,7 +116,9 @@ def create_icon(keep_cover: bool, target_ratio: float = None):
 
 def find_image(folder_path: str, file_name: str):
   for file in os.listdir(folder_path):
-    if file.startswith(file_name) and os.path.isfile(os.path.join(folder_path, file)):
+    file_lower = file.lower()
+    base_name, ext = os.path.splitext(file_lower)
+    if base_name == file_name and ext in IMAGE_EXTENSIONS:
       return os.path.join(folder_path, file)
   return None
 
