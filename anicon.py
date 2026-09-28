@@ -12,8 +12,12 @@ from warnings import filterwarnings
 
 filterwarnings('ignore')
 
-COVER_IMAGE_FILENAME = 'cover.jpg'
-FOLDER_IMAGE_FILENAME = 'folder.jpg'
+COVER_IMAGE_FILENAME = 'cover'
+COVER_IMAGE_EXTENSION = '.jpg'
+
+FOLDER_IMAGE_FILENAME = 'folder'
+FOLDER_IMAGE_EXTENSION = '.jpg'
+
 DESKTOP_INI_FILENAME = 'desktop.ini'
 
 SKIPPED_ALREADY_EXISTING = 'Skipping "{}", which already has an icon.'
@@ -23,7 +27,7 @@ LAST_WORDS_REGEX = r'\b(?:BD|S0|480P|720P|1080P)\b.*$'
 
 BRACKETS_OR_PARENS_REGEX = r'\[[^\]]*\]|\([^\)]*\)|\(\)|\[\]'
 
-def get_name(folder_name: str) -> str:
+def get_name(folder_name: str):
   folder_name = re.sub(r'[_.]', ' ', folder_name)
   folder_name = re.sub(WORDS_TO_REMOVE_REGEX, '', folder_name, flags = re.IGNORECASE)
   folder_name = re.sub(BRACKETS_OR_PARENS_REGEX, '', folder_name, flags = re.IGNORECASE)
@@ -72,9 +76,9 @@ def download_cover(img_link: str):
   open(cover_image_path, 'wb').write(art.content)
 
 def create_icon(keep_cover: bool, target_ratio: float = None):
-  if os.path.isfile(cover_image_path):
+  if cover_image_path and os.path.isfile(cover_image_path):
     img_path = cover_image_path
-  elif os.path.isfile(folder_image_path):
+  elif folder_image_path and os.path.isfile(folder_image_path):
     img_path = folder_image_path
   else:
     raise FileNotFoundError('No cover image found')
@@ -101,12 +105,18 @@ def create_icon(keep_cover: bool, target_ratio: float = None):
   img = img.convert('RGBA')
   img = ImageOps.pad(img, (256, 256), color=(0, 0, 0, 0))
 
-  if not keep_cover:
+  if not keep_cover and os.path.isfile(cover_image_path):
     os.remove(cover_image_path)
 
   img.save(ico_path, format='ICO', sizes=[(256, 48), (256, 256), (16, 16)])
   img.close()
   return ico_path
+
+def find_image(folder_path: str, file_name: str):
+  for file in os.listdir(folder_path):
+    if file.startswith(file_name) and os.path.isfile(os.path.join(folder_path, file)):
+      return os.path.join(folder_path, file)
+  return None
 
 def handle_exception(e):
   print('Ran into an error.')
@@ -199,8 +209,8 @@ Save cover? Y/N:
     ico_file = icon_name + '.ico'
     ico_path = os.path.join(folder, ico_file)
     ini_path = os.path.join(folder, DESKTOP_INI_FILENAME)
-    cover_image_path = os.path.join(folder, COVER_IMAGE_FILENAME)
-    folder_image_path = os.path.join(folder, FOLDER_IMAGE_FILENAME)
+    cover_image_path = find_image(folder, COVER_IMAGE_FILENAME) or os.path.join(folder, COVER_IMAGE_FILENAME + COVER_IMAGE_EXTENSION)
+    folder_image_path = find_image(folder, FOLDER_IMAGE_FILENAME) or os.path.join(folder, FOLDER_IMAGE_FILENAME + FOLDER_IMAGE_EXTENSION)
 
     try:
       if os.path.isfile(ico_path):
@@ -214,7 +224,11 @@ Save cover? Y/N:
             continue
 
       artwork_url, artwork_type = None, None
-      if os.path.isfile(cover_image_path) or os.path.isfile(folder_image_path):
+      if (
+        cover_image_path and os.path.isfile(cover_image_path)
+      ) or (
+        folder_image_path and os.path.isfile(folder_image_path)
+      ):
         print(f'Using already existing cover image for "{folder}".')
         keep_cover = True
       else:
