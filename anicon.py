@@ -166,7 +166,9 @@ def save_ini(artwork_type: str):
   if artwork_type:
     config[DESKTOP_INI_SHELL_CLASS_INFO]['InfoTip'] = artwork_type
 
-  subprocess.run(['attrib', '-h', '-s', ini_path])
+  if os.path.isfile(ini_path):
+    subprocess.run(['attrib', '-h', '-s', ini_path])
+
   with open(ini_path, 'w') as f:
     config.write(f)
 
