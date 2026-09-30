@@ -19,7 +19,7 @@ IMAGE_EXTENSIONS = ['.ico', '.jpeg', '.jpg', '.png', '.webp']
 
 COVER_IMAGE_FILENAME = 'cover'
 COVER_IMAGE_EXTENSION = '.jpg'
-COVER_IMAGE_SIZE = 450
+MAX_COVER_IMAGE_SIZE = 450
 
 FOLDER_IMAGE_FILENAME = 'folder'
 FOLDER_IMAGE_EXTENSION = '.jpg'
@@ -91,7 +91,9 @@ def download_cover(img_link: str, keep_cover: bool, ratio: float = None):
   if keep_cover:
     if ratio is not None:
       cover_img = crop_to_ratio(cover_img, ratio)
-    cover_img = ImageOps.contain(cover_img, (COVER_IMAGE_SIZE, COVER_IMAGE_SIZE), Image.LANCZOS)
+
+    if max(cover_img.width, cover_img.height) > MAX_COVER_IMAGE_SIZE:
+      cover_img = ImageOps.contain(cover_img, (MAX_COVER_IMAGE_SIZE, MAX_COVER_IMAGE_SIZE), Image.LANCZOS)
 
   cover_img = cover_img.convert('RGB')
   cover_img.save(cover_image_path)
