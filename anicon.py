@@ -1,5 +1,6 @@
 import argparse
 import configparser
+import io
 import os
 import re
 import subprocess
@@ -18,9 +19,13 @@ IMAGE_EXTENSIONS = ['.ico', '.jpeg', '.jpg', '.png', '.webp']
 
 COVER_IMAGE_FILENAME = 'cover'
 COVER_IMAGE_EXTENSION = '.jpg'
+COVER_IMAGE_SIZE = 450
 
 FOLDER_IMAGE_FILENAME = 'folder'
 FOLDER_IMAGE_EXTENSION = '.jpg'
+
+ICON_SIZES = [256, 48, 16]
+MAX_ICON_SIZE = max(ICON_SIZES)
 
 DESKTOP_INI_FILENAME = 'desktop.ini'
 DESKTOP_INI_SHELL_CLASS_INFO = '.ShellClassInfo'
@@ -79,9 +84,38 @@ def get_artwork(media_name: str, max_results: int = 5, media_type: str = 'anime'
 
   return image_url, image_type
 
-def download_cover(img_link: str):
-  art = get(img_link)
-  open(cover_image_path, 'wb').write(art.content)
+def download_cover(img_link: str, keep_cover: bool, ratio: float = None):
+  img_content = io.BytesIO(get(img_link).content)
+  cover_img = Image.open(img_content)
+
+  if keep_cover:
+    if ratio is not None:
+      cover_img = crop_to_ratio(cover_img, ratio)
+    cover_img = ImageOps.contain(cover_img, (COVER_IMAGE_SIZE, COVER_IMAGE_SIZE), Image.LANCZOS)
+
+  cover_img = cover_img.convert('RGB')
+  cover_img.save(cover_image_path)
+  cover_img.close()
+
+def crop_to_ratio(img: Image.Image, target_ratio: float) -> Image.Image:
+  old_w, old_h = img.size
+  current_ratio = old_w / old_h
+
+  if current_ratio == target_ratio:
+    return img
+
+  x0, y0, x1, y1 = 0, 0, old_w, old_h
+
+  if current_ratio > target_ratio:
+    new_w = round(old_h * target_ratio)
+    x0 = (old_w - new_w) // 2
+    x1 = x0 + new_w
+  elif current_ratio < target_ratio:
+    new_h = round(old_w / target_ratio)
+    y0 = (old_h - new_h) // 2
+    y1 = y0 + new_h
+
+  return img.crop((x0, y0, x1, y1))
 
 def save_icon(keep_cover: bool, target_ratio: float = None):
   if cover_image_path and os.path.isfile(cover_image_path):
@@ -92,26 +126,12 @@ def save_icon(keep_cover: bool, target_ratio: float = None):
     raise FileNotFoundError('No cover image found')
 
   img = Image.open(img_path)
-  if target_ratio is not None:
-    old_w, old_h = img.size
-    current_ratio = old_w / old_h
-
-    if current_ratio != target_ratio:
-      x0, y0, x1, y1 = 0, 0, old_w, old_h
-
-      if current_ratio > target_ratio:
-        new_w = round(old_h * target_ratio)
-        x0 = (old_w - new_w) // 2
-        x1 = x0 + new_w
-      elif current_ratio < target_ratio:
-        new_h = round(old_w / target_ratio)
-        y0 = (old_h - new_h) // 2
-        y1 = y0 + new_h
-
-      img = img.crop((x0, y0, x1, y1))
-
   img = img.convert('RGBA')
-  img = ImageOps.pad(img, (256, 256), color=(0, 0, 0, 0))
+
+  if target_ratio is not None:
+    img = crop_to_ratio(img, target_ratio)
+
+  img = ImageOps.pad(img, (MAX_ICON_SIZE, MAX_ICON_SIZE), color=(0, 0, 0, 0))
 
   if not keep_cover and os.path.isfile(cover_image_path):
     os.remove(cover_image_path)
@@ -119,7 +139,7 @@ def save_icon(keep_cover: bool, target_ratio: float = None):
   if os.path.isfile(ico_path):
     os.remove(ico_path)
 
-  img.save(ico_path, format='ICO', sizes=[(256, 48), (256, 256), (16, 16)])
+  img.save(ico_path, format='ICO', sizes=[(size, size) for size in ICON_SIZES])
   img.close()
   return ico_path
 
@@ -279,7 +299,7 @@ Save cover? Y/N:
           continue
 
         try:
-          download_cover(artwork_url)
+          download_cover(artwork_url, keep_cover, ratio)
         except Exception as e:
           handle_exception(e)
           continue
