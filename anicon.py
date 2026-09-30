@@ -1,6 +1,8 @@
 import argparse
+import configparser
 import os
 import re
+import subprocess
 import sys
 import traceback
 
@@ -21,6 +23,7 @@ FOLDER_IMAGE_FILENAME = 'folder'
 FOLDER_IMAGE_EXTENSION = '.jpg'
 
 DESKTOP_INI_FILENAME = 'desktop.ini'
+DESKTOP_INI_SHELL_CLASS_INFO = '.ShellClassInfo'
 
 SKIPPED_ALREADY_EXISTING = 'Skipping "{}", which already has an icon.'
 
@@ -38,12 +41,15 @@ def get_name(folder_name: str):
 
 def get_artwork(media_name: str, max_results: int = 5, media_type: str = 'anime') -> tuple:
   results, counter, choice = None, 1, 0
-  if media_type == 'anime':
-    results = AnimeSearch(media_name).results
-  elif media_type == 'manga':
-    results = MangaSearch(media_name).results
-  else:
-    raise Exception('Invalid mode specified')
+  try:
+    if media_type == 'anime':
+      results = AnimeSearch(media_name).results
+    elif media_type == 'manga':
+      results = MangaSearch(media_name).results
+    else:
+      raise Exception('Invalid mode specified')
+  except ValueError:
+    return None, None
 
   if not auto_mode:
     print(f'\n{media_name}\n X  Skip this folder')
@@ -77,7 +83,7 @@ def download_cover(img_link: str):
   art = get(img_link)
   open(cover_image_path, 'wb').write(art.content)
 
-def create_icon(keep_cover: bool, target_ratio: float = None):
+def save_icon(keep_cover: bool, target_ratio: float = None):
   if cover_image_path and os.path.isfile(cover_image_path):
     img_path = cover_image_path
   elif folder_image_path and os.path.isfile(folder_image_path):
@@ -110,6 +116,9 @@ def create_icon(keep_cover: bool, target_ratio: float = None):
   if not keep_cover and os.path.isfile(cover_image_path):
     os.remove(cover_image_path)
 
+  if os.path.isfile(ico_path):
+    os.remove(ico_path)
+
   img.save(ico_path, format='ICO', sizes=[(256, 48), (256, 256), (16, 16)])
   img.close()
   return ico_path
@@ -121,6 +130,25 @@ def find_image(folder_path: str, file_name: str):
     if base_name == file_name and ext in IMAGE_EXTENSIONS:
       return os.path.join(folder_path, file)
   return None
+
+def save_ini(artwork_type: str):
+  config = configparser.ConfigParser()
+  if not config.has_section(DESKTOP_INI_SHELL_CLASS_INFO):
+    config.add_section(DESKTOP_INI_SHELL_CLASS_INFO)
+
+  config[DESKTOP_INI_SHELL_CLASS_INFO]['ConfirmFileOp'] = '0'
+  config[DESKTOP_INI_SHELL_CLASS_INFO]['IconResource'] = f'{ico_file},0'
+  config[DESKTOP_INI_SHELL_CLASS_INFO]['IconFile'] = ico_file
+  config[DESKTOP_INI_SHELL_CLASS_INFO]['IconIndex'] = '0'
+
+  if artwork_type:
+    config[DESKTOP_INI_SHELL_CLASS_INFO]['InfoTip'] = artwork_type
+
+  subprocess.run(['attrib', '-h', '-s', ini_path])
+  with open(ini_path, 'w') as f:
+    config.write(f)
+
+  subprocess.run(['attrib', '+h', '+s', ini_path])
 
 def handle_exception(e):
   print('Ran into an error.')
@@ -140,6 +168,7 @@ https://github.com/jesuscc1993/anicon''')
     parser.add_argument('--max-results', '-n', type=int, help='Max results to show (default 5)')
     parser.add_argument('--media-type', '-m', choices=['anime', 'manga'], help='Media type: (anime/manga)')
     parser.add_argument('--keep-cover', '-k', action='store_true', help='Save cover image')
+    parser.add_argument('--overwrite', '-o', action='store_true', help='Overwrite existing icons')
     parser.add_argument('--ratio', '-r', type=float, help='Aspect ratio for icon crop (e.g. 2/3 = 0.67)')
     args = parser.parse_args()
 
@@ -147,7 +176,8 @@ https://github.com/jesuscc1993/anicon''')
     max_results = 1 if auto_mode else (args.max_results if args.max_results is not None else 5)
     media_type = args.media_type or 'anime'
     keep_cover = args.keep_cover if args.keep_cover is not None else (media_type == 'manga')
-    ratio = args.ratio if args.ratio else None
+    overwrite_existing = args.overwrite if args.overwrite is not None else False
+    ratio = args.ratio if args.ratio is not None else None
 
     print('''
 Using arguments:
@@ -155,7 +185,8 @@ Using arguments:
   max_results : {}
   media_type  : {}
   keep_cover  : {}
-'''.format(auto_mode, max_results, media_type, keep_cover))
+  overwrite_existing: {}
+'''.format(auto_mode, max_results, media_type, keep_cover, overwrite_existing))
 
   else:
     auto_mode = input('''
@@ -190,6 +221,7 @@ Save cover? Y/N:
       media_type = 'anime'
       keep_cover = False
 
+    overwrite_existing = False
     ratio = None
 
   folder_list = next(os.walk('.'))[1]
@@ -217,13 +249,15 @@ Save cover? Y/N:
     folder_image_path = find_image(folder, FOLDER_IMAGE_FILENAME) or os.path.join(folder, FOLDER_IMAGE_FILENAME + FOLDER_IMAGE_EXTENSION)
 
     try:
-      if os.path.isfile(ico_path):
-        print(SKIPPED_ALREADY_EXISTING.format(folder))
-        continue
+      if not overwrite_existing:
+        if os.path.isfile(ico_path):
+          print(SKIPPED_ALREADY_EXISTING.format(folder))
+          continue
 
-      if os.path.isfile(ini_path):
-        with open(ini_path, 'r') as f:
-          if 'IconResource' in f.read():
+        if os.path.isfile(ini_path):
+          config = configparser.ConfigParser()
+          config.read(ini_path)
+          if config.has_option(DESKTOP_INI_SHELL_CLASS_INFO, 'IconResource'):
             print(SKIPPED_ALREADY_EXISTING.format(folder))
             continue
 
@@ -235,11 +269,10 @@ Save cover? Y/N:
       ):
         print(f'Using already existing cover image for "{folder}".')
         keep_cover = True
+      elif max_results == 0:
+        print(f'Skipping "{folder}" since max_results is 0 and no existing cover image was found.')
+        continue
       else:
-        for file_path in [ico_path, ini_path]:
-          if os.path.isfile(file_path):
-            os.remove(file_path)
-
         artwork_url, artwork_type = get_artwork(name, max_results, media_type)
         if not artwork_url or not artwork_type:
           print(f'Skipping "{folder}" since artwork could not be retrieved.')
@@ -251,21 +284,11 @@ Save cover? Y/N:
           handle_exception(e)
           continue
 
-      create_icon(keep_cover, ratio)
+      save_icon(keep_cover, ratio)
+      save_ini(artwork_type)
 
-      with open(ini_path, 'w+') as f:
-        f.write('[.ShellClassInfo]\nConfirmFileOp=0\n')
-        f.write('IconResource={},0'.format(ico_file))
-        f.write('\nIconFile={}\nIconIndex=0'.format(ico_file))
-
-        if artwork_type:
-          f.write('\nInfoTip={}'.format(artwork_type))
-
-      f.close()
-
-      os.system('attrib +h +s \"{}\"'.format(ini_path))
-      os.system('attrib +h \"{}\"'.format(ico_path))
-      os.system('attrib +s \"{}\"'.format(folder))
+      subprocess.run(['attrib', '+h', ico_path])
+      subprocess.run(['attrib', '+s', folder])
 
       if auto_mode:
         print(f'Generated icon for folder "{folder}".')
