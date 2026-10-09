@@ -24,6 +24,7 @@ MAX_COVER_IMAGE_SIZE = 450
 FOLDER_IMAGE_FILENAME = 'folder'
 FOLDER_IMAGE_EXTENSION = '.jpg'
 
+ICON_FILE_NAME = 'icon.ico'
 ICON_SIZES = [256, 48, 16]
 MAX_ICON_SIZE = max(ICON_SIZES)
 
@@ -159,8 +160,8 @@ def save_ini(artwork_type: str):
     config.add_section(DESKTOP_INI_SHELL_CLASS_INFO)
 
   config[DESKTOP_INI_SHELL_CLASS_INFO]['ConfirmFileOp'] = '0'
-  config[DESKTOP_INI_SHELL_CLASS_INFO]['IconResource'] = f'{ico_file},0'
-  config[DESKTOP_INI_SHELL_CLASS_INFO]['IconFile'] = ico_file
+  config[DESKTOP_INI_SHELL_CLASS_INFO]['IconResource'] = f'{ICON_FILE_NAME},0'
+  config[DESKTOP_INI_SHELL_CLASS_INFO]['IconFile'] = ICON_FILE_NAME
   config[DESKTOP_INI_SHELL_CLASS_INFO]['IconIndex'] = '0'
 
   if artwork_type:
@@ -264,10 +265,7 @@ Save cover? Y/N:
     # path, now performing a search for the directory name.
     name = name.rpartition('\\')[2].strip()
 
-    icon_name = re.sub('[^A-Za-z0-9_,. ()-]', '_', name)
-
-    ico_file = icon_name + '.ico'
-    ico_path = os.path.join(folder, ico_file)
+    ico_path = os.path.join(folder, ICON_FILE_NAME)
     ini_path = os.path.join(folder, DESKTOP_INI_FILENAME)
     cover_image_path = find_image(folder, COVER_IMAGE_FILENAME) or os.path.join(folder, COVER_IMAGE_FILENAME + COVER_IMAGE_EXTENSION)
     folder_image_path = find_image(folder, FOLDER_IMAGE_FILENAME) or os.path.join(folder, FOLDER_IMAGE_FILENAME + FOLDER_IMAGE_EXTENSION)
