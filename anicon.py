@@ -273,15 +273,22 @@ Save cover? Y/N:
     folder_image_path = find_image(folder, FOLDER_IMAGE_FILENAME) or os.path.join(folder, FOLDER_IMAGE_FILENAME + FOLDER_IMAGE_EXTENSION)
 
     try:
-      if not overwrite_existing:
-        if os.path.isfile(ico_path):
-          print(SKIPPED_ALREADY_EXISTING.format(folder))
-          continue
-
-        if os.path.isfile(ini_path):
-          config = configparser.ConfigParser()
-          config.read(ini_path)
-          if config.has_option(DESKTOP_INI_SHELL_CLASS_INFO, 'IconResource'):
+      if not overwrite_existing and os.path.isfile(ini_path):
+        config = configparser.ConfigParser(interpolation=None)
+        config.read(ini_path)
+        icon_resource = config.get(
+          DESKTOP_INI_SHELL_CLASS_INFO,
+          'IconResource',
+          fallback=None
+        )
+        if icon_resource:
+          rel_icon_path = os.path.expandvars(icon_resource.rsplit(',', 1)[0])
+          abs_icon_path = (
+            rel_icon_path
+            if os.path.isabs(rel_icon_path)
+            else os.path.join(folder, rel_icon_path)
+          )
+          if os.path.isfile(abs_icon_path):
             print(SKIPPED_ALREADY_EXISTING.format(folder))
             continue
 
