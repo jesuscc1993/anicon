@@ -6,12 +6,12 @@ import re
 import subprocess
 import sys
 import traceback
+from warnings import filterwarnings
 
-from PIL import Image, ImageOps
 # noinspection PyPackageRequirements
 from mal import AnimeSearch, MangaSearch
+from PIL import Image, ImageOps
 from requests import get
-from warnings import filterwarnings
 
 filterwarnings('ignore')
 
@@ -38,14 +38,22 @@ LAST_WORDS_REGEX = r'\b(?:BD|S0|480P|720P|1080P)\b.*$'
 
 BRACKETS_OR_PARENS_REGEX = r'\[[^\]]*\]|\([^\)]*\)|\(\)|\[\]'
 
+
 def get_name(folder_name: str):
   folder_name = re.sub(r'[_.]', ' ', folder_name)
-  folder_name = re.sub(WORDS_TO_REMOVE_REGEX, '', folder_name, flags = re.IGNORECASE)
-  folder_name = re.sub(BRACKETS_OR_PARENS_REGEX, '', folder_name, flags = re.IGNORECASE)
-  folder_name = re.sub(LAST_WORDS_REGEX, '', folder_name, flags = re.IGNORECASE)
+  folder_name = re.sub(
+    WORDS_TO_REMOVE_REGEX, '', folder_name, flags=re.IGNORECASE
+  )
+  folder_name = re.sub(
+    BRACKETS_OR_PARENS_REGEX, '', folder_name, flags=re.IGNORECASE
+  )
+  folder_name = re.sub(LAST_WORDS_REGEX, '', folder_name, flags=re.IGNORECASE)
   return folder_name.strip()
 
-def get_artwork(media_name: str, max_results: int = 5, media_type: str = 'anime') -> tuple:
+
+def get_artwork(
+  media_name: str, max_results: int = 5, media_type: str = 'anime'
+) -> tuple:
   results, counter, choice = None, 1, 0
   try:
     if media_type == 'anime':
@@ -53,7 +61,7 @@ def get_artwork(media_name: str, max_results: int = 5, media_type: str = 'anime'
     elif media_type == 'manga':
       results = MangaSearch(media_name).results
     else:
-      raise Exception('Invalid mode specified')
+      raise ValueError('Invalid mode specified')
   except ValueError:
     return None, None
 
@@ -85,7 +93,8 @@ def get_artwork(media_name: str, max_results: int = 5, media_type: str = 'anime'
 
   return image_url, image_type
 
-def download_cover(img_link: str, keep_cover: bool, ratio: float = None):
+
+def download_cover(img_link: str, keep_cover: bool, ratio: float | None = None):
   img_content = io.BytesIO(get(img_link).content)
   cover_img = Image.open(img_content)
 
@@ -94,11 +103,14 @@ def download_cover(img_link: str, keep_cover: bool, ratio: float = None):
       cover_img = crop_to_ratio(cover_img, ratio)
 
     if max(cover_img.width, cover_img.height) > MAX_COVER_IMAGE_SIZE:
-      cover_img = ImageOps.contain(cover_img, (MAX_COVER_IMAGE_SIZE, MAX_COVER_IMAGE_SIZE), Image.LANCZOS)
+      cover_img = ImageOps.contain(
+        cover_img, (MAX_COVER_IMAGE_SIZE, MAX_COVER_IMAGE_SIZE), Image.LANCZOS
+      )
 
   cover_img = cover_img.convert('RGB')
   cover_img.save(cover_image_path)
   cover_img.close()
+
 
 def crop_to_ratio(img: Image.Image, target_ratio: float) -> Image.Image:
   old_w, old_h = img.size
@@ -120,7 +132,8 @@ def crop_to_ratio(img: Image.Image, target_ratio: float) -> Image.Image:
 
   return img.crop((x0, y0, x1, y1))
 
-def save_icon(keep_cover: bool, target_ratio: float = None):
+
+def save_icon(keep_cover: bool, target_ratio: float | None = None):
   if cover_image_path and os.path.isfile(cover_image_path):
     img_path = cover_image_path
   elif folder_image_path and os.path.isfile(folder_image_path):
@@ -146,6 +159,7 @@ def save_icon(keep_cover: bool, target_ratio: float = None):
   img.close()
   return ico_path
 
+
 def find_image(folder_path: str, file_name: str):
   for file in os.listdir(folder_path):
     file_lower = file.lower()
@@ -153,6 +167,7 @@ def find_image(folder_path: str, file_name: str):
     if base_name == file_name and ext in IMAGE_EXTENSIONS:
       return os.path.join(folder_path, file)
   return None
+
 
 def save_ini(artwork_type: str):
   config = configparser.ConfigParser()
@@ -168,80 +183,129 @@ def save_ini(artwork_type: str):
     config[DESKTOP_INI_SHELL_CLASS_INFO]['InfoTip'] = artwork_type
 
   if os.path.isfile(ini_path):
-    subprocess.run(['attrib', '-h', '-s', ini_path])
+    subprocess.run(['attrib', '-h', '-s', ini_path], check=False)
 
   with open(ini_path, 'w') as f:
     config.write(f)
 
-  subprocess.run(['attrib', '+h', '+s', ini_path])
+  subprocess.run(['attrib', '+h', '+s', ini_path], check=False)
+
 
 def handle_exception(e):
   print('Ran into an error.')
   for line in traceback.format_exception(None, e, e.__traceback__):
-    print(line, end = '')
+    print(line, end='')
   input('Press Enter to continue...')
 
+
 if __name__ == '__main__':
-  print('''\
+  print("""\
 Run this in your anime/manga folder
 For help and info, check out
-https://github.com/jesuscc1993/anicon''')
+https://github.com/jesuscc1993/anicon""")
 
   if len(sys.argv) > 1:
     parser = argparse.ArgumentParser(add_help=True)
-    parser.add_argument('--auto-mode', '-a', action='store_true', help='Use AutoMode (non-interactive)')
-    parser.add_argument('--max-results', '-n', type=int, help='Max results to show (default 5)')
-    parser.add_argument('--media-type', '-m', choices=['anime', 'manga'], help='Media type: (anime/manga)')
-    parser.add_argument('--keep-cover', '-k', action='store_true', help='Save cover image')
-    parser.add_argument('--overwrite', '-o', action='store_true', help='Overwrite existing icons')
-    parser.add_argument('--ratio', '-r', type=float, help='Aspect ratio for icon crop (e.g. 2/3 = 0.67)')
+    parser.add_argument(
+      '--auto-mode',
+      '-a',
+      action='store_true',
+      default=None,
+      help='Use AutoMode (non-interactive)',
+    )
+    parser.add_argument(
+      '--max-results',
+      '-n',
+      type=int,
+      help='Max results to show (default 5)'
+    )
+    parser.add_argument(
+      '--media-type',
+      '-m',
+      choices=['anime', 'manga'],
+      help='Media type: (anime/manga)',
+    )
+    parser.add_argument(
+      '--keep-cover',
+      '-k',
+      action='store_true',
+      default=None,
+      help='Save cover image'
+    )
+    parser.add_argument(
+      '--overwrite',
+      '-o',
+      action='store_true',
+      default=None,
+      help='Overwrite existing icons'
+    )
+    parser.add_argument(
+      '--ratio',
+      '-r',
+      type=float,
+      help='Aspect ratio for icon crop (e.g. 2/3 = 0.67)',
+    )
     args = parser.parse_args()
 
     auto_mode = bool(args.auto_mode)
-    max_results = 1 if auto_mode else (args.max_results if args.max_results is not None else 5)
+    max_results = (
+      1
+      if auto_mode
+      else (args.max_results if args.max_results is not None else 5)
+    )
     media_type = args.media_type or 'anime'
-    keep_cover = args.keep_cover if args.keep_cover is not None else (media_type == 'manga')
+    keep_cover = (
+      args.keep_cover
+      if args.keep_cover is not None
+      else (media_type == 'manga')
+    )
     overwrite_existing = args.overwrite if args.overwrite is not None else False
     ratio = args.ratio if args.ratio is not None else None
 
-    print('''
+    print(f"""
 Using arguments:
-  auto_mode   : {}
-  max_results : {}
-  media_type  : {}
-  keep_cover  : {}
-  overwrite_existing: {}
-'''.format(auto_mode, max_results, media_type, keep_cover, overwrite_existing))
+  auto_mode   : {auto_mode}
+  max_results : {max_results}
+  media_type  : {media_type}
+  keep_cover  : {keep_cover}
+  overwrite_existing: {overwrite_existing}
+""")
 
   else:
-    auto_mode = input('''
+    auto_mode = (
+      input("""
 Use Auto Mode? Y/N:
 (Default = N)
-> ''').upper() == 'Y'
+> """).upper()
+      == 'Y'
+    )
 
     if auto_mode:
       max_results = 1
     else:
-      max_results = input('''
+      max_results = input("""
 Max Results:
 (Default = 5)
-> ''')
+> """)
       try:
         max_results = int(max_results)
       except ValueError:
         max_results = 5
 
-    media_type = input('''
+    media_type = input("""
 Media Type:
 (1) anime
  2  manga
-> ''')
+> """)
     if media_type == '2':
       media_type = 'manga'
-      keep_cover = input('''
+      keep_cover = (
+        input("""
 Save cover? Y/N:
 (Default = Y)
-> ''').upper() != 'N'
+> """).upper()
+        != 'N'
+      )
     else:
       media_type = 'anime'
       keep_cover = False
@@ -257,6 +321,7 @@ Save cover? Y/N:
     folder_list = [str(os.getcwd())]
 
   for folder in folder_list:
+    keep_cover_for_folder = keep_cover
     name = get_name(folder)
 
     # Extracting the name of the folder without the path and then performing
@@ -267,17 +332,19 @@ Save cover? Y/N:
 
     ico_path = os.path.join(folder, ICON_FILE_NAME)
     ini_path = os.path.join(folder, DESKTOP_INI_FILENAME)
-    cover_image_path = find_image(folder, COVER_IMAGE_FILENAME) or os.path.join(folder, COVER_IMAGE_FILENAME + COVER_IMAGE_EXTENSION)
-    folder_image_path = find_image(folder, FOLDER_IMAGE_FILENAME) or os.path.join(folder, FOLDER_IMAGE_FILENAME + FOLDER_IMAGE_EXTENSION)
+    cover_image_path = find_image(folder, COVER_IMAGE_FILENAME) or os.path.join(
+      folder, COVER_IMAGE_FILENAME + COVER_IMAGE_EXTENSION
+    )
+    folder_image_path = find_image(
+      folder, FOLDER_IMAGE_FILENAME
+    ) or os.path.join(folder, FOLDER_IMAGE_FILENAME + FOLDER_IMAGE_EXTENSION)
 
     try:
       if not overwrite_existing and os.path.isfile(ini_path):
         config = configparser.ConfigParser(interpolation=None)
         config.read(ini_path)
         icon_resource = config.get(
-          DESKTOP_INI_SHELL_CLASS_INFO,
-          'IconResource',
-          fallback=None
+          DESKTOP_INI_SHELL_CLASS_INFO, 'IconResource', fallback=None
         )
         if icon_resource:
           rel_icon_path = os.path.expandvars(icon_resource.rsplit(',', 1)[0])
@@ -291,15 +358,15 @@ Save cover? Y/N:
             continue
 
       artwork_url, artwork_type = None, None
-      if (
-        cover_image_path and os.path.isfile(cover_image_path)
-      ) or (
+      if (cover_image_path and os.path.isfile(cover_image_path)) or (
         folder_image_path and os.path.isfile(folder_image_path)
       ):
         print(f'Using already existing cover image for "{folder}".')
-        keep_cover = True
+        keep_cover_for_folder = True
       elif max_results == 0:
-        print(f'Skipping "{folder}" since max_results is 0 and no existing cover image was found.')
+        print(
+          f'Skipping "{folder}" since max_results is 0 and no existing cover image was found.'
+        )
         continue
       else:
         artwork_url, artwork_type = get_artwork(name, max_results, media_type)
@@ -308,16 +375,16 @@ Save cover? Y/N:
           continue
 
         try:
-          download_cover(artwork_url, keep_cover, ratio)
+          download_cover(artwork_url, keep_cover_for_folder, ratio)
         except Exception as e:
           handle_exception(e)
           continue
 
-      save_icon(keep_cover, ratio)
+      save_icon(keep_cover_for_folder, ratio)
       save_ini(artwork_type)
 
-      subprocess.run(['attrib', '+h', ico_path])
-      subprocess.run(['attrib', '+s', folder])
+      subprocess.run(['attrib', '+h', ico_path], check=False)
+      subprocess.run(['attrib', '+s', folder], check=False)
 
       if auto_mode:
         print(f'Generated icon for folder "{folder}".')
